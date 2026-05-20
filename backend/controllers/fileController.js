@@ -69,3 +69,41 @@ export const downloadFile = async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
+export const getFileInfo = async (req, res) => {
+  try {
+    const fileId = req.params.id;
+    const file = await File.findById(fileId);
+
+    if (!file) {
+      return res.status(404).json({ message: 'File not found or expired' });
+    }
+
+    // If the file belongs to a room, fetch all files in that room
+    let roomFiles = [];
+    if (file.roomId) {
+      roomFiles = await File.find({ roomId: file.roomId }).sort({ createdAt: -1 });
+    }
+
+    res.status(200).json({
+      file: {
+        _id: file._id,
+        originalName: file.originalName,
+        size: file.size,
+        mimeType: file.mimeType,
+        roomId: file.roomId,
+        createdAt: file.createdAt,
+      },
+      roomFiles: roomFiles.map((f) => ({
+        _id: f._id,
+        originalName: f.originalName,
+        size: f.size,
+        mimeType: f.mimeType,
+        createdAt: f.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error('Get File Info Error:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};

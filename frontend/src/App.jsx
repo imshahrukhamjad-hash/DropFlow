@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import FileUpload from './components/FileUpload';
+import DownloadPage from './components/DownloadPage';
 import { useSocket } from './context/SocketContext';
 import { Activity, Share2, DownloadCloud } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   const { socket } = useSocket();
   const [roomId, setRoomId] = useState('');
   const [joinedRoom, setJoinedRoom] = useState(false);
   const [roomFiles, setRoomFiles] = useState([]);
+  const [downloadFileId, setDownloadFileId] = useState(null);
 
   useEffect(() => {
     if (!socket) return;
@@ -22,6 +25,32 @@ function App() {
     };
   }, [socket]);
 
+  // Check if the URL is a shareable download link
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/download/')) {
+      const id = path.split('/').pop();
+      if (id) {
+        setDownloadFileId(id);
+      }
+    }
+  }, []);
+
+  const handleBackFromDownload = () => {
+    setDownloadFileId(null);
+    window.history.pushState({}, '', '/');
+  };
+
+  // If we're on a download page, render the DownloadPage component
+  if (downloadFileId) {
+    return (
+      <>
+        <Toaster position="bottom-right" reverseOrder={false} />
+        <DownloadPage fileId={downloadFileId} onBack={handleBackFromDownload} />
+      </>
+    );
+  }
+
   const handleJoinRoom = (e) => {
     e.preventDefault();
     if (roomId.trim() && socket) {
@@ -32,6 +61,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+      <Toaster position="bottom-right" reverseOrder={false} />
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -106,7 +136,7 @@ function App() {
                         </div>
                       </div>
                       <a 
-                        href={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/api/files/download/${file.fileId}`}
+                        href={`${import.meta.env.VITE_BACKEND_URL || 'http://192.168.1.6:5000'}/api/files/download/${file.fileId}`}
                         download
                         className="text-sm font-medium text-brand-600 hover:text-brand-800"
                       >

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { UploadCloud, File, CheckCircle } from 'lucide-react';
 import ProgressBar from './ProgressBar';
 import { useSocket } from '../context/SocketContext';
+import { toast } from 'react-hot-toast';
 
 const FileUpload = ({ roomId }) => {
   const [file, setFile] = useState(null);
@@ -45,7 +46,7 @@ const FileUpload = ({ roomId }) => {
 
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/api/files/upload`,
+        `${import.meta.env.VITE_BACKEND_URL || 'http://192.168.1.6:5000'}/api/files/upload`,
         formData,
         {
           headers: {
@@ -64,17 +65,72 @@ const FileUpload = ({ roomId }) => {
       );
 
       setUploadState('success');
-      setDownloadLink(response.data.downloadLink);
+      toast.success('File uploaded successfully!');
+      
+      // Ensure the download link uses the current window host (which would be the laptop's IP when accessed from mobile)
+      let link = response.data.downloadLink;
+      if (link) {
+        try {
+          const url = new URL(link);
+          if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+            url.host = window.location.host;
+          }
+          link = url.toString();
+        } catch (e) {
+          console.error('Error parsing download link:', e);
+        }
+      }
+      setDownloadLink(link);
       setFile(null); // Clear selected file after success
     } catch (error) {
       console.error('Upload Error:', error);
       setUploadState('error');
+      toast.error('An error occurred during upload. Please try again.');
     }
   };
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(downloadLink);
-    alert('Link copied to clipboard!');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(downloadLink)
+        .then(() => {
+          toast.success('Link copied to clipboard!');
+        })
+        .catch((err) => {
+          console.error('Failed to copy via navigator.clipboard: ', err);
+          fallbackCopyText(downloadLink);
+        });
+    } else {
+      fallbackCopyText(downloadLink);
+    }
+  };
+
+  const fallbackCopyText = (text) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    
+    // Avoid scrolling to bottom
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        toast.success('Link copied to clipboard!');
+      } else {
+        toast.error('Failed to copy link. Please select and copy it manually.');
+      }
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+      toast.error('Failed to copy link. Please select and copy it manually.');
+    }
+
+    document.body.removeChild(textArea);
   };
 
   return (

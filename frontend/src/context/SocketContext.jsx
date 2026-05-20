@@ -12,7 +12,7 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     // Assuming backend is running on 5000 in dev
-    const newSocket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000');
+    const newSocket = io(import.meta.env.VITE_BACKEND_URL || 'http://192.168.1.6:5000');
     setSocket(newSocket);
 
     return () => newSocket.close();
